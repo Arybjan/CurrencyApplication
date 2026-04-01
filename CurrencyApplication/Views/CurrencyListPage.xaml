@@ -1,0 +1,43 @@
+﻿<Page x:Class="CurrencyApp.Views.CurrencyListPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      mc:Ignorable="d"
+      Title="CurrencyListPage">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Список валют"
+                   FontSize="24"
+                   FontWeight="Bold"
+                   Margin="0,0,0,20"/>
+
+        <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,0,0,15">
+            <Button Content="Загрузить тестовые данные"
+                    Width="200"
+                    Height="35"
+                    Command="{Binding LoadTestDataCommand}"/>
+        </StackPanel>
+
+        <DataGrid Grid.Row="2"
+                  ItemsSource="{Binding Currencies}"
+                  AutoGenerateColumns="False"
+                  IsReadOnly="True">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="100"/>
+                <DataGridTextColumn Header="Код" Binding="{Binding CharCode}" Width="100"/>
+                <DataGridTextColumn Header="Название" Binding="{Binding Name}" Width="200"/>
+                <DataGridTextColumn Header="Номинал" Binding="{Binding Nominal}" Width="100"/>
+                <DataGridTextColumn Header="Курс" Binding="{Binding Value}" Width="120"/>
+                <DataGridTextColumn Header="Предыдущий" Binding="{Binding Previous}" Width="120"/>
+                <DataGridCheckBoxColumn Header="Пользовательская" Binding="{Binding IsUserAdded}" Width="140"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Page>
