@@ -1,4 +1,4 @@
-﻿<Page x:Class="CurrencyApp.Views.CurrencyListPage"
+﻿<Page x:Class="CurrencyApplication.Views.CurrencyListPage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -23,12 +23,23 @@
                     Width="200"
                     Height="35"
                     Command="{Binding LoadTestDataCommand}"/>
+            <Button Content="Загрузить с API"
+                    Width="180"
+                    Height="35"
+                    Margin="10,0,0,0"
+                    Command="{Binding LoadFromApiCommand}"/>
+            <Button Content="Удалить"
+                    Width="120"
+                    Height="35"
+                    Margin="10,0,0,0"
+                    Command="{Binding DeleteCurrencyCommand}"/>
         </StackPanel>
 
         <DataGrid Grid.Row="2"
-                  ItemsSource="{Binding Currencies}"
-                  AutoGenerateColumns="False"
-                  IsReadOnly="True">
+              ItemsSource="{Binding Currencies}"
+              SelectedItem="{Binding SelectedCurrency}"
+              AutoGenerateColumns="False"
+              IsReadOnly="True">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="100"/>
                 <DataGridTextColumn Header="Код" Binding="{Binding CharCode}" Width="100"/>

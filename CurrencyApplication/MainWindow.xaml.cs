@@ -1,23 +1,34 @@
-﻿using CurrencyApp.Views;
+﻿using CurrencyApplication.ViewModels;
+using CurrencyApplication.Views;
 using System.Windows;
 
-namespace CurrencyApp;
-
-public partial class MainWindow : Window
+namespace CurrencyApplication
 {
-    public MainWindow()
+    public partial class MainWindow : Window
     {
-        InitializeComponent();
-        MainFrame.Navigate(new CurrencyListPage());
-    }
+        private readonly CurrencyListPage _currencyListPage;
 
-    private void CurrenciesButton_Click(object sender, RoutedEventArgs e)
-    {
-        MainFrame.Navigate(new CurrencyListPage());
-    }
+        public MainWindow()
+        {
+            InitializeComponent();
 
-    private void AddCurrencyButton_Click(object sender, RoutedEventArgs e)
-    {
-        MainFrame.Navigate(new AddCurrencyPage());
+            _currencyListPage = new CurrencyListPage();
+            MainFrame.Navigate(_currencyListPage);
+        }
+
+        private async void CurrenciesButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currencyListPage.DataContext is CurrencyListViewModel vm)
+            {
+                await vm.LoadLocalDataAsync();
+            }
+
+            MainFrame.Navigate(_currencyListPage);
+        }
+
+        private void AddCurrencyButton_Click(object sender, RoutedEventArgs e)
+        {
+            MainFrame.Navigate(new AddCurrencyPage());
+        }
     }
 }

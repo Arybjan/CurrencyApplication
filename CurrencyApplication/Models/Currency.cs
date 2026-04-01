@@ -1,4 +1,4 @@
-﻿namespace CurrencyApp.Models;
+﻿namespace CurrencyApplication.Models;
 
 public class Currency
 {

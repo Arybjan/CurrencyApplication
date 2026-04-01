@@ -1,7 +1,7 @@
-﻿using CurrencyApp.ViewModels;
+﻿using CurrencyApplication.ViewModels;
 using System.Windows.Controls;
 
-namespace CurrencyApp.Views;
+namespace CurrencyApplication.Views;
 
 public partial class CurrencyListPage : Page
 {
