@@ -1,13 +1,14 @@
 ﻿using CurrencyApplication.ViewModels;
 using System.Windows.Controls;
 
-namespace CurrencyApplication.Views;
-
-public partial class CurrencyListPage : Page
+namespace CurrencyApplication.Views
 {
-    public CurrencyListPage()
+    public partial class CurrencyListPage : Page
     {
-        InitializeComponent();
-        DataContext = new CurrencyListViewModel();
+        public CurrencyListPage()
+        {
+            InitializeComponent();
+            DataContext = new CurrencyListViewModel();
+        }
     }
 }

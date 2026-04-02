@@ -14,6 +14,7 @@ namespace CurrencyApplication.ViewModels
     {
         private readonly ApiService _apiService = new ApiService();
         private readonly JsonStorageService _jsonStorageService = new JsonStorageService();
+        private readonly SqliteStorageService _sqliteService = new SqliteStorageService();
         private readonly SettingsService _settingsService = new SettingsService();
 
         public ObservableCollection<Currency> Currencies { get; set; } = new ObservableCollection<Currency>();
@@ -40,32 +41,29 @@ namespace CurrencyApplication.ViewModels
             }
         }
 
-        public CurrencyListViewModel()
+        private string _storageType = "JSON";
+        public string StorageType
         {
-            LoadLocalDataOnStartup();
-            LoadLastSession();
-        }
-
-        // 🔹 Загрузка локальных данных при старте
-        private async void LoadLocalDataOnStartup()
-        {
-            await LoadLocalDataAsync();
-        }
-
-        public async Task LoadLocalDataAsync()
-        {
-            var localCurrencies = await _jsonStorageService.LoadAsync();
-
-            Currencies.Clear();
-
-            foreach (var currency in localCurrencies)
+            get => _storageType;
+            set
             {
-                Currencies.Add(currency);
+                _storageType = value;
+                OnPropertyChanged(nameof(StorageType));
             }
         }
 
-        // 🔹 Загрузка last session
-        private async void LoadLastSession()
+        public CurrencyListViewModel()
+        {
+            LoadSettingsAndData();
+        }
+
+        private async void LoadSettingsAndData()
+        {
+            await LoadSettingsAsync();
+            await LoadLocalDataAsync();
+        }
+
+        private async Task LoadSettingsAsync()
         {
             var settings = await _settingsService.LoadAsync();
 
@@ -77,23 +75,70 @@ namespace CurrencyApplication.ViewModels
             {
                 LastSessionText = "Первый запуск";
             }
+
+            if (!string.IsNullOrWhiteSpace(settings.StorageType))
+            {
+                StorageType = settings.StorageType;
+            }
+            else
+            {
+                StorageType = "JSON";
+            }
         }
 
-        // 🔹 Загрузка с API + merge
+        private async Task<List<Currency>> LoadDataAsync()
+        {
+            if (StorageType == "SQLite")
+            {
+                return await _sqliteService.LoadAsync();
+            }
+
+            return await _jsonStorageService.LoadAsync();
+        }
+
+        private async Task SaveDataAsync(List<Currency> currencies)
+        {
+            if (StorageType == "SQLite")
+            {
+                await _sqliteService.SaveAsync(currencies);
+            }
+            else
+            {
+                await _jsonStorageService.SaveAsync(currencies);
+            }
+        }
+
+        public async Task LoadLocalDataAsync()
+        {
+            var localCurrencies = await LoadDataAsync();
+
+            Currencies.Clear();
+
+            foreach (var currency in localCurrencies.OrderBy(c => c.CharCode))
+            {
+                Currencies.Add(currency);
+            }
+        }
+
+        [RelayCommand]
+        private async Task ReloadLocalData()
+        {
+            await LoadLocalDataAsync();
+        }
+
         [RelayCommand]
         private async Task LoadFromApi()
         {
             try
             {
                 var apiCurrencies = await _apiService.GetCurrenciesAsync();
-                var localCurrencies = await _jsonStorageService.LoadAsync();
+                var localCurrencies = await LoadDataAsync();
 
                 var userCurrencies = localCurrencies
                     .Where(c => c.IsUserAdded)
                     .ToList();
 
                 var mergedCurrencies = new List<Currency>();
-
                 mergedCurrencies.AddRange(apiCurrencies);
 
                 foreach (var userCurrency in userCurrencies)
@@ -107,7 +152,6 @@ namespace CurrencyApplication.ViewModels
                     }
                 }
 
-                // сортировка (красиво выглядит)
                 mergedCurrencies = mergedCurrencies
                     .OrderBy(c => c.CharCode)
                     .ToList();
@@ -119,24 +163,23 @@ namespace CurrencyApplication.ViewModels
                     Currencies.Add(currency);
                 }
 
-                await _jsonStorageService.SaveAsync(mergedCurrencies);
+                await SaveDataAsync(mergedCurrencies);
             }
             catch
             {
-                var localCurrencies = await _jsonStorageService.LoadAsync();
+                var localCurrencies = await LoadDataAsync();
 
                 Currencies.Clear();
 
-                foreach (var currency in localCurrencies)
+                foreach (var currency in localCurrencies.OrderBy(c => c.CharCode))
                 {
                     Currencies.Add(currency);
                 }
 
-                MessageBox.Show("Ошибка API. Показаны локальные данные.");
+                MessageBox.Show("Не удалось загрузить данные из API. Показаны локальные данные.");
             }
         }
 
-        // 🔹 Удаление валюты
         [RelayCommand]
         private async Task DeleteCurrency()
         {
@@ -153,27 +196,40 @@ namespace CurrencyApplication.ViewModels
                 MessageBoxImage.Warning);
 
             if (result != MessageBoxResult.Yes)
+            {
                 return;
+            }
 
-            var currencies = await _jsonStorageService.LoadAsync();
+            var currencies = await LoadDataAsync();
 
-            var itemToRemove = currencies
-                .FirstOrDefault(c => c.Id == SelectedCurrency.Id);
+            var itemToRemove = currencies.FirstOrDefault(c =>
+                c.Id.Equals(SelectedCurrency.Id, StringComparison.OrdinalIgnoreCase));
 
             if (itemToRemove != null)
             {
                 currencies.Remove(itemToRemove);
-                await _jsonStorageService.SaveAsync(currencies);
+                await SaveDataAsync(currencies);
             }
 
             Currencies.Remove(SelectedCurrency);
+            SelectedCurrency = null;
         }
 
-        // 🔹 Перезагрузка локальных данных (после добавления)
         [RelayCommand]
-        private async Task ReloadLocalData()
+        private async Task SwitchStorage()
         {
+            StorageType = StorageType == "JSON" ? "SQLite" : "JSON";
+
+            var currentData = Currencies.ToList();
+            await SaveDataAsync(currentData);
+
+            var settings = await _settingsService.LoadAsync();
+            settings.StorageType = StorageType;
+            await _settingsService.SaveAsync(settings);
+
             await LoadLocalDataAsync();
+
+            MessageBox.Show("Текущее хранилище: " + StorageType);
         }
     }
 }
