@@ -1,12 +1,12 @@
 ﻿using CommunityToolkit.Mvvm.Input;
 using CurrencyApplication.Models;
 using CurrencyApplication.Services;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System;
-using System.Linq;
-using System.Collections.Generic;
 
 namespace CurrencyApplication.ViewModels
 {
@@ -14,14 +14,39 @@ namespace CurrencyApplication.ViewModels
     {
         private readonly ApiService _apiService = new ApiService();
         private readonly JsonStorageService _jsonStorageService = new JsonStorageService();
+        private readonly SettingsService _settingsService = new SettingsService();
 
         public ObservableCollection<Currency> Currencies { get; set; } = new ObservableCollection<Currency>();
+
+        private Currency _selectedCurrency;
+        public Currency SelectedCurrency
+        {
+            get => _selectedCurrency;
+            set
+            {
+                _selectedCurrency = value;
+                OnPropertyChanged(nameof(SelectedCurrency));
+            }
+        }
+
+        private string _lastSessionText;
+        public string LastSessionText
+        {
+            get => _lastSessionText;
+            set
+            {
+                _lastSessionText = value;
+                OnPropertyChanged(nameof(LastSessionText));
+            }
+        }
 
         public CurrencyListViewModel()
         {
             LoadLocalDataOnStartup();
+            LoadLastSession();
         }
 
+        // 🔹 Загрузка локальных данных при старте
         private async void LoadLocalDataOnStartup()
         {
             await LoadLocalDataAsync();
@@ -39,40 +64,22 @@ namespace CurrencyApplication.ViewModels
             }
         }
 
-        [RelayCommand]
-        private async Task ReloadLocalData()
+        // 🔹 Загрузка last session
+        private async void LoadLastSession()
         {
-            await LoadLocalDataAsync();
+            var settings = await _settingsService.LoadAsync();
+
+            if (settings.LastSessionTime != default)
+            {
+                LastSessionText = "Последний запуск: " + settings.LastSessionTime.ToString("g");
+            }
+            else
+            {
+                LastSessionText = "Первый запуск";
+            }
         }
 
-        [RelayCommand]
-        private void LoadTestData()
-        {
-            Currencies.Clear();
-
-            Currencies.Add(new Currency
-            {
-                Id = "USD",
-                CharCode = "USD",
-                Name = "Доллар США",
-                Nominal = 1,
-                Value = 89.50m,
-                Previous = 89.10m,
-                IsUserAdded = false
-            });
-
-            Currencies.Add(new Currency
-            {
-                Id = "EUR",
-                CharCode = "EUR",
-                Name = "Евро",
-                Nominal = 1,
-                Value = 97.20m,
-                Previous = 96.80m,
-                IsUserAdded = false
-            });
-        }
-
+        // 🔹 Загрузка с API + merge
         [RelayCommand]
         private async Task LoadFromApi()
         {
@@ -100,6 +107,11 @@ namespace CurrencyApplication.ViewModels
                     }
                 }
 
+                // сортировка (красиво выглядит)
+                mergedCurrencies = mergedCurrencies
+                    .OrderBy(c => c.CharCode)
+                    .ToList();
+
                 Currencies.Clear();
 
                 foreach (var currency in mergedCurrencies)
@@ -120,21 +132,11 @@ namespace CurrencyApplication.ViewModels
                     Currencies.Add(currency);
                 }
 
-                MessageBox.Show("Не удалось загрузить данные из API. Показаны локальные данные.");
+                MessageBox.Show("Ошибка API. Показаны локальные данные.");
             }
         }
 
-        private Currency _selectedCurrency;
-        public Currency SelectedCurrency
-        {
-            get => _selectedCurrency;
-            set
-            {
-                _selectedCurrency = value;
-                OnPropertyChanged(nameof(SelectedCurrency));
-            }
-        }
-
+        // 🔹 Удаление валюты
         [RelayCommand]
         private async Task DeleteCurrency()
         {
@@ -165,6 +167,13 @@ namespace CurrencyApplication.ViewModels
             }
 
             Currencies.Remove(SelectedCurrency);
+        }
+
+        // 🔹 Перезагрузка локальных данных (после добавления)
+        [RelayCommand]
+        private async Task ReloadLocalData()
+        {
+            await LoadLocalDataAsync();
         }
     }
 }
